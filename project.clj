@@ -1,0 +1,7 @@
+(defproject ring-tomcat-adapter :lein-v
+  :description "Ring Apache Tomcat adapter"
+  :url "http://github.com/marchrock/ring-tomcat-adapter"
+  :license {:name "Apache License, Version 2.0"
+            :url "http://www.apache.org/licenses/LICENSE-2.0.html"}
+  :dependencies [[org.clojure/clojure "1.8.0"]
+                 [org.apache.tomcat.embed/tomcat-embed-core "8.5.13"]])
