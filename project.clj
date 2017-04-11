@@ -6,7 +6,7 @@
   :release-tasks [["vcs" "assert-committed"]
                   ["v" "update"]
                   ["vcs" "push"]
-                  ["deploy"]]
+                  ["deploy" "clojars"]]
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [ring/ring-core "1.6.0-RC2"]
                  [ring/ring-servlet "1.6.0-RC2"]
