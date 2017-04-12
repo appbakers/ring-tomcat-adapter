@@ -6,4 +6,5 @@
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [ring/ring-core "1.6.0-RC2"]
                  [ring/ring-servlet "1.6.0-RC2"]
-                 [org.apache.tomcat.embed/tomcat-embed-core "8.5.13"]])
+                 [org.apache.tomcat.embed/tomcat-embed-core "8.5.13"]
+                 [clj-http "3.4.1"]])
