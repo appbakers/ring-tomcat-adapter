@@ -22,7 +22,7 @@ Tomcat adapter functionality is provided from namespace `ring.adapter.tomcat`.
 
 ;; In application
 (ns example-app.core
-  {:require [ring.adapter.tomcat :as tomcat]})
+  (:require [ring.adapter.tomcat :as tomcat]))
 ```
 
 Then run you ring handler with Tomcat.
