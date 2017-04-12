@@ -10,13 +10,14 @@
                  (.setBaseDir "."))
         server (.getServer tomcat)
         host (.getHost tomcat)]
-    (.addLifecycleListener server (JreMemoryLeakPreventionListener,))
+    (.addLifecycleListener server (JreMemoryLeakPreventionListener.))
     (.setAppBase host "resources")
     tomcat))
 
 (defn run-tomcat
-  "Start a Tomcat to serve given handler with supplied options:
+  "Start a Tomcat to serve given handler with supplied options
 
+  :await? - block the thread until server get shutdown command (default: true)
   :port - the port to listen on (default: 8080)"
   [handler options]
   (let [server (create-server options)
@@ -24,5 +25,6 @@
     (.addServlet server "" "ring-servlet" (ring-servlet/servlet handler))
     (.addServletMapping context "/*" "ring-servlet")
     (.start server)
-    (.await (.getServer server))
+    (when (:await? options true)
+      (.await (.getServer server)))
     server))
