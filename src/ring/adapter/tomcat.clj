@@ -1,6 +1,7 @@
 (ns ring.adapter.tomcat
   "Ring adapter for Apache Tomcat"
-  (:import [org.apache.catalina.startup Tomcat])
+  (:import [org.apache.catalina.startup Tomcat]
+           [org.apache.catalina.core JreMemoryLeakPreventionListener])
   (:require [ring.util.servlet :as ring-servlet]))
 
 (defn- create-server [options]
@@ -9,6 +10,7 @@
                  (.setBaseDir "."))
         server (.getServer tomcat)
         host (.getHost tomcat)]
+    (.addLifecycleListener server (JreMemoryLeakPreventionListener,))
     (.setAppBase host "resources")
     tomcat))
 
