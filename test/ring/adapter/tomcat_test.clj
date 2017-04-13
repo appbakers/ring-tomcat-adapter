@@ -16,7 +16,7 @@
 
 (deftest test-run-tomcat
   (testing "Tomcat HTTP"
-    (with-server hello-world {:port 3000}
+    (with-server hello-world {:port 3000 :http? true}
       (let [response (client/get "http://localhost:3000/")]
         (is (= (:status response) 200))
         (is (= (:body response) "Hello, World"))))))
