@@ -29,6 +29,7 @@
       (.setHostName (:ssl-host-name options "_default_"))
       (.setCertificateKeystoreFile (:keystore options nil))
       (.setCertificateKeystorePassword (:key-password options nil))
+      (.setCiphers https-ciphers)
       (.setSslProtocol (:ssl-protocol options "TLS")))
     (doto connector
       (.setScheme "https")
