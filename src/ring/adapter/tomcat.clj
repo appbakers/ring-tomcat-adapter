@@ -16,27 +16,28 @@
        "ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:"
        "ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256"))
 
-(defn- create-http-connector []
-  (let [connector (doto (Connector. http-connector))]
-    connector))
-
-(defn- create-https-connector
-  [options]
-  (let [connector (create-http-connector)
-        ssl-config (SSLHostConfig.)]
-    (println "create-https-connector")
-    (doto ssl-config
+(defn- create-ssl-host-config [options]
+  (let [ssl-host-config (SSLHostConfig.)]
+    (doto ssl-host-config
       (.setHostName (:ssl-host-name options "_default_"))
       (.setCertificateKeystoreFile (:keystore options nil))
       (.setCertificateKeystorePassword (:key-password options nil))
       (.setCiphers https-ciphers)
       (.setSslProtocol (:ssl-protocol options "TLS")))
+    ssl-host-config))
+
+(defn- create-http-connector []
+  (let [connector (doto (Connector. http-connector))]
+    connector))
+
+(defn- create-https-connector [options]
+  (let [connector (create-http-connector)
+        ssl-config (create-ssl-host-config options)]
     (doto connector
       (.setScheme "https")
       (.setSecure true)
       (.addSslHostConfig ssl-config))
     (.setSSLEnabled ^Http11NioProtocol (.getProtocolHandler connector) true)
-    (println (str (.getSecure connector) ", " (.getScheme connector) ", " (count (.getCertificates ssl-config))))
     connector))
 
 (defn- create-connector [options]
