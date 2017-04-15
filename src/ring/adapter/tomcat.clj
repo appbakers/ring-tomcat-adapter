@@ -2,17 +2,45 @@
   "Ring adapter for Apache Tomcat"
   (:import [org.apache.catalina.startup Tomcat]
            [org.apache.catalina.core JreMemoryLeakPreventionListener]
-           [org.apache.catalina.connector Connector])
+           [org.apache.catalina.connector Connector]
+           [org.apache.coyote.http11 Http11NioProtocol]
+           [org.apache.tomcat.util.net SSLHostConfig])
   (:require [ring.util.servlet :as ring-servlet]))
 
 (def http-connector "org.apache.coyote.http11.Http11NioProtocol")
+
+(def https-ciphers
+  (str "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:"
+       "ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:"
+       "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:"
+       "ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:"
+       "ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256"))
 
 (defn- create-http-connector []
   (let [connector (doto (Connector. http-connector))]
     connector))
 
+(defn- create-https-connector
+  [options]
+  (let [connector (create-http-connector)
+        ssl-config (SSLHostConfig.)]
+    (println "create-https-connector")
+    (doto ssl-config
+      (.setHostName (:ssl-host-name options "_default_"))
+      (.setCertificateKeystoreFile (:keystore options nil))
+      (.setCertificateKeystorePassword (:key-password options nil))
+      (.setSslProtocol (:ssl-protocol options "TLS")))
+    (doto connector
+      (.setScheme "https")
+      (.setSecure true)
+      (.addSslHostConfig ssl-config))
+    (.setSSLEnabled ^Http11NioProtocol (.getProtocolHandler connector) true)
+    (println (str (.getSecure connector) ", " (.getScheme connector) ", " (count (.getCertificates ssl-config))))
+    connector))
+
 (defn- create-connector [options]
   (let [connector (cond
+                    (:https? options false) (create-https-connector options)
                     (:http? options true) (create-http-connector)
                     :else (create-http-connector))]
     (doto connector
