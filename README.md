@@ -7,7 +7,7 @@
 To use tomcat as ring adapter, add following in your project dependencies.
 
 ```
-[marchrock/ring-tomcat-adapter "0.1.5-SNAPSHOT"]
+[marchrock/ring-tomcat-adapter "0.2.0"]
 ```
 
 ring-tomcat-adapter is available from [Clojars](https://clojars.org/marchrock/ring-tomcat-adapter)
