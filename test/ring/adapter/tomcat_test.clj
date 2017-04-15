@@ -19,4 +19,10 @@
     (with-server hello-world {:port 3000 :http? true}
       (let [response (client/get "http://localhost:3000/")]
         (is (= (:status response) 200))
+        (is (= (:body response) "Hello, World")))))
+
+  (testing "Tomcat HTTPS"
+    (with-server hello-world {:port 3443 :https? true :keystore "resources/keystore.jks" :key-password "ring-tomcat-adapter"}
+      (let [response (client/get "https://localhost:3443" {:insecure? true})]
+        (is (= (:status response) 200))
         (is (= (:body response) "Hello, World"))))))
