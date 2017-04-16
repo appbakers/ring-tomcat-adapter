@@ -40,11 +40,11 @@
 (defn- create-ssl-host-config [options]
   (let [ssl-host-config (SSLHostConfig.)]
     (doto ssl-host-config
-      (.setHostName (:ssl-host-name options "_default_"))
+      (.setHostName (:tls-hostname options "_default_"))
       (.setCertificateKeystoreFile (:keystore options nil))
       (.setCertificateKeystorePassword (:key-password options nil))
-      (.setCiphers https-ciphers)
-      (.setSslProtocol (:ssl-protocol options "TLS")))
+      (.setCiphers (:tls-ciphers options https-ciphers))
+      (.setSslProtocol (:tls-protocol options "TLS")))
     ssl-host-config))
 
 (defn- create-http-connector [options]
