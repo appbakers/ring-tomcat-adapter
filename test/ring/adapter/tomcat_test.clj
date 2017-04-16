@@ -37,8 +37,11 @@
         (is (= (:status response) 200))
         (is (= (:body response) "Hello, World")))))
 
-  (testing "Tomcat HTTPS"
-    (with-server hello-world {:port 3443 :https? true :keystore "resources/keystore.jks" :key-password "ring-tomcat-adapter"}
+  (testing "Tomcat HTTP and HTTPS"
+    (with-server hello-world {:https-port 3443 :https? true :keystore "resources/keystore.jks" :key-password "ring-tomcat-adapter"}
       (let [response (client/get "https://localhost:3443" {:insecure? true})]
+        (is (= (:status response) 200))
+        (is (= (:body response) "Hello, World")))
+      (let [response (client/get "http://localhost:8080" {:insecure? true})]
         (is (= (:status response) 200))
         (is (= (:body response) "Hello, World"))))))
