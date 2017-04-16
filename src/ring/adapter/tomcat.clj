@@ -89,7 +89,14 @@
 
   :await? - block the thread until server get shutdown command (default: true)
   :http? - create http connector (default: true)
-  :port - the port to listen on (default: 8080)"
+  :port - the port to listen on http connector (default: 8080)
+  :https? - create https connector (default: false)
+  :https-port - the port to listen on https connector (default: 8443)
+  :keystore - path to keystore file include server certificate
+  :key-pass - password of keystore file
+  :tls-hostname - hostname to listen for https connector (default: _default_)
+  :tls-protocol - list of SSL/TLS protocol to support for https connector (default: TLS)
+  :tls-ciphers - list of SSL/TLS ciphers to support for https connector (default: too long. ECDHE-ECDSA and ECDHE-RSA ciphers)"
   [handler options]
   (let [server (create-server options)
         context (.addContext server "" ".")]
