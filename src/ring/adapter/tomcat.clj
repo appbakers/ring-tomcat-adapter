@@ -20,8 +20,13 @@
            [org.apache.catalina.core JreMemoryLeakPreventionListener]
            [org.apache.catalina.connector Connector]
            [org.apache.coyote.http11 Http11NioProtocol]
-           [org.apache.tomcat.util.net SSLHostConfig])
+           [org.apache.tomcat.util.net SSLHostConfig]
+           (org.apache.catalina Server Service))
   (:require [ring.util.servlet :as ring-servlet]))
+
+(def default-http-port 8080)
+
+(def default-https-port 8443)
 
 (def http-connector "org.apache.coyote.http11.Http11NioProtocol")
 
@@ -42,35 +47,39 @@
       (.setSslProtocol (:ssl-protocol options "TLS")))
     ssl-host-config))
 
-(defn- create-http-connector []
-  (let [connector (doto (Connector. http-connector))]
+(defn- create-http-connector [options]
+  (let [connector (Connector. http-connector)]
+    (doto connector
+      (.setPort (:port options default-http-port)))
+    (when (:https? options false)
+      (.setRedirectPort connector (:https-port options default-https-port)))
     connector))
 
 (defn- create-https-connector [options]
-  (let [connector (create-http-connector)
+  (let [connector (Connector. http-connector)
         ssl-config (create-ssl-host-config options)]
     (doto connector
       (.setScheme "https")
       (.setSecure true)
-      (.addSslHostConfig ssl-config))
+      (.addSslHostConfig ssl-config)
+      (.setPort (:https-port options default-https-port)))
     (.setSSLEnabled ^Http11NioProtocol (.getProtocolHandler connector) true)
     connector))
 
-(defn- create-connector [options]
-  (let [connector (cond
-                    (:https? options false) (create-https-connector options)
-                    (:http? options true) (create-http-connector)
-                    :else (create-http-connector))]
-    (doto connector
-      (.setPort (:port options 8080)))
-    connector))
+(defn- create-connector [^Service service options]
+  (when (:http? options true)
+    (.addConnector service (create-http-connector options)))
+  (when (:https? options false)
+    (.addConnector service (create-https-connector options)))
+  service)
 
 (defn- create-server [options]
   (let [tomcat (doto (Tomcat.)
-                 (.setBaseDir ".")
-                 (.setConnector (create-connector options)))
+                 (.setBaseDir "."))
         server (.getServer tomcat)
+        service (.getService tomcat)
         host (.getHost tomcat)]
+    (create-connector service options)
     (.addLifecycleListener server (JreMemoryLeakPreventionListener.))
     (.setAppBase host "resources")
     tomcat))
@@ -88,5 +97,5 @@
     (.addServletMapping context "/*" "ring-servlet")
     (.start server)
     (when (:await? options true)
-      (.await (.getServer server)))
+      (.await ^Server (.getServer server)))
     server))
