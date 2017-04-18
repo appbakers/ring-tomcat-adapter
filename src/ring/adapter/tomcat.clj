@@ -17,11 +17,12 @@
 (ns ring.adapter.tomcat
   "Ring adapter for Apache Tomcat"
   (:import [org.apache.catalina.startup Tomcat]
-           [org.apache.catalina.core JreMemoryLeakPreventionListener]
+           [org.apache.catalina.core JreMemoryLeakPreventionListener StandardThreadExecutor]
            [org.apache.catalina.connector Connector]
+           [org.apache.coyote AbstractProtocol]
            [org.apache.coyote.http11 Http11NioProtocol]
            [org.apache.tomcat.util.net SSLHostConfig]
-           (org.apache.catalina Server Service))
+           [org.apache.catalina Server Service])
   (:require [ring.util.servlet :as ring-servlet]))
 
 (def default-http-port 8080)
@@ -37,6 +38,16 @@
        "ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:"
        "ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256"))
 
+(defn- create-executor [options]
+  (let [executor (StandardThreadExecutor.)]
+    (doto executor
+      (.setName (:executor-name options "ring-executor"))
+      (.setNamePrefix (str (:executor-name options "ring-executor") "-"))
+      (.setMaxThreads (:max-threads options 200))
+      (.setMinSpareThreads (:min-spare-threads options 25))
+      (.setMaxIdleTime (:max-idle-time options 60000))
+      (.start))))
+
 (defn- create-ssl-host-config [options]
   (let [ssl-host-config (SSLHostConfig.)]
     (doto ssl-host-config
@@ -47,30 +58,44 @@
       (.setSslProtocol (:tls-protocol options "TLS")))
     ssl-host-config))
 
-(defn- create-http-connector [options]
-  (let [connector (Connector. http-connector)]
-    (doto connector
-      (.setPort (:port options default-http-port)))
-    (when (:https? options false)
-      (.setRedirectPort connector (:https-port options default-https-port)))
-    connector))
+(defn- create-http-connector
+  ([options]
+   (let [connector (Connector. http-connector)]
+     (doto connector
+       (.setPort (:port options default-http-port)))
+     (when (:https? options false)
+       (.setRedirectPort connector (:https-port options default-https-port)))
+     connector))
+  ([options executor]
+   (let [connector (create-http-connector options)]
+     (.setExecutor (cast AbstractProtocol (.getProtocolHandler connector)) executor)
+     connector)))
 
-(defn- create-https-connector [options]
-  (let [connector (Connector. http-connector)
-        ssl-config (create-ssl-host-config options)]
-    (doto connector
-      (.setScheme "https")
-      (.setSecure true)
-      (.addSslHostConfig ssl-config)
-      (.setPort (:https-port options default-https-port)))
-    (.setSSLEnabled ^Http11NioProtocol (.getProtocolHandler connector) true)
-    connector))
+(defn- create-https-connector
+  ([options]
+   (let [connector (Connector. http-connector)
+         ssl-config (create-ssl-host-config options)
+         protocol-handler (.getProtocolHandler connector)]
+     (doto connector
+       (.setScheme "https")
+       (.setSecure true)
+       (.addSslHostConfig ssl-config)
+       (.setPort (:https-port options default-https-port)))
+     (.setSSLEnabled ^Http11NioProtocol (.getProtocolHandler connector) true)
+     (println (.getExecutorName connector))
+     connector))
+  ([options executor]
+   (let [connector (create-https-connector options)]
+     (.setExecutor (cast AbstractProtocol (.getProtocolHandler connector)) executor)
+     connector)))
 
 (defn- create-connector [^Service service options]
-  (when (:http? options true)
-    (.addConnector service (create-http-connector options)))
-  (when (:https? options false)
-    (.addConnector service (create-https-connector options)))
+  (let [executor (create-executor options)]
+    (.addExecutor service executor)
+    (when (:http? options true)
+      (.addConnector service (create-http-connector options executor)))
+    (when (:https? options false)
+      (.addConnector service (create-https-connector options executor))))
   service)
 
 (defn- create-server [options]
