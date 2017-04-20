@@ -128,7 +128,12 @@
   :key-pass - password of keystore file
   :tls-hostname - hostname to listen for https connector (default: _default_)
   :tls-protocol - list of SSL/TLS protocol to support for https connector (default: TLS)
-  :tls-ciphers - list of SSL/TLS ciphers to support for https connector (default: too long. ECDHE-ECDSA and ECDHE-RSA ciphers)"
+  :tls-ciphers - list of SSL/TLS ciphers to support for https connector (default: too long. ECDHE-ECDSA and ECDHE-RSA ciphers)
+  :executor? - use executor (default: true)
+  :executor-name - name of executor (default: ring-executor)
+  :max-threads - max number of threads in executor (default: 200)
+  :min-spare-threads - minimum number of spare threads in executor (default: 25)
+  :max-idle-time - max milliseconds before an idle thread shutsdown (default: 60000)"
   [handler options]
   (let [server (create-server options)
         context (.addContext server "" ".")]
