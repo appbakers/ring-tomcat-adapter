@@ -57,7 +57,7 @@
       (.setSslProtocol (:tls-protocol options "TLS")))
     ssl-host-config))
 
-(defmacro create-connector-with-executor
+(defmacro create-executored-connector
   [connector-generator executor options]
   `(let [connector# (~connector-generator ~options)]
      (.setExecutor (cast AbstractProtocol (.getProtocolHandler connector#)) ~executor)
@@ -84,13 +84,26 @@
     (.setSSLEnabled ^Http11NioProtocol (.getProtocolHandler connector) true)
     connector))
 
-(defn- create-connector [^Service service options]
-  (let [executor (create-executor options)]
-    (.addExecutor service executor)
-    (when (:http? options true)
-      (.addConnector service (create-connector-with-executor create-http-connector executor options)))
-    (when (:https? options false)
-      (.addConnector service (create-connector-with-executor create-https-connector executor options))))
+(defmacro create-executored-connectors
+  [body ^Service service options]
+  `(let [executor# (create-executor ~options)]
+     (.addExecutor ~service executor#)
+     (~body ~service ~options executor#)
+     ~service))
+
+(defmacro create-connector-fn
+  [create-fn ^Service service options & executor]
+  `(.addConnector
+     ~service
+     (if (:executor? ~options true)
+       (create-executored-connector ~create-fn (first ~@executor) ~options)
+       (~create-fn ~options))))
+
+(defn- create-connector [^Service service options & executor]
+  (when (:http? options true)
+    (create-connector-fn create-http-connector service options executor))
+  (when (:https? options false)
+    (create-connector-fn create-https-connector service options executor))
   service)
 
 (defn- create-server [options]
@@ -99,7 +112,9 @@
         server (.getServer tomcat)
         service (.getService tomcat)
         host (.getHost tomcat)]
-    (create-connector service options)
+    (if (:executor? options true)
+      (create-executored-connectors create-connector service options)
+      (create-connector service options))
     (.addLifecycleListener server (JreMemoryLeakPreventionListener.))
     (.setAppBase host "resources")
     tomcat))
