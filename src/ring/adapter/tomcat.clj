@@ -45,8 +45,7 @@
       (.setNamePrefix (str (:executor-name options "ring-executor") "-"))
       (.setMaxThreads (:max-threads options 200))
       (.setMinSpareThreads (:min-spare-threads options 25))
-      (.setMaxIdleTime (:max-idle-time options 60000))
-      (.start))))
+      (.setMaxIdleTime (:max-idle-time options 60000)))))
 
 (defn- create-ssl-host-config [options]
   (let [ssl-host-config (SSLHostConfig.)]
@@ -82,7 +81,6 @@
        (.addSslHostConfig ssl-config)
        (.setPort (:https-port options default-https-port)))
      (.setSSLEnabled ^Http11NioProtocol (.getProtocolHandler connector) true)
-     (println (.getExecutorName connector))
      connector))
   ([options executor]
    (let [connector (create-https-connector options)]
