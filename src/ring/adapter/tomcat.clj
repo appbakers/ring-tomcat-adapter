@@ -57,43 +57,40 @@
       (.setSslProtocol (:tls-protocol options "TLS")))
     ssl-host-config))
 
-(defn- create-http-connector
-  ([options]
-   (let [connector (Connector. http-connector)]
-     (doto connector
-       (.setPort (:port options default-http-port)))
-     (when (:https? options false)
-       (.setRedirectPort connector (:https-port options default-https-port)))
-     connector))
-  ([options executor]
-   (let [connector (create-http-connector options)]
-     (.setExecutor (cast AbstractProtocol (.getProtocolHandler connector)) executor)
-     connector)))
+(defmacro create-connector-with-executor
+  [connector-generator executor options]
+  `(let [connector# (~connector-generator ~options)]
+     (.setExecutor (cast AbstractProtocol (.getProtocolHandler connector#)) ~executor)
+     connector#))
+
+(defn- create-http-connector [options]
+  (let [connector (Connector. http-connector)]
+    (doto connector
+      (.setPort (:port options default-http-port)))
+    (when (:https? options false)
+      (.setRedirectPort connector (:https-port options default-https-port)))
+    connector))
 
 (defn- create-https-connector
-  ([options]
-   (let [connector (Connector. http-connector)
-         ssl-config (create-ssl-host-config options)
-         protocol-handler (.getProtocolHandler connector)]
-     (doto connector
-       (.setScheme "https")
-       (.setSecure true)
-       (.addSslHostConfig ssl-config)
-       (.setPort (:https-port options default-https-port)))
-     (.setSSLEnabled ^Http11NioProtocol (.getProtocolHandler connector) true)
-     connector))
-  ([options executor]
-   (let [connector (create-https-connector options)]
-     (.setExecutor (cast AbstractProtocol (.getProtocolHandler connector)) executor)
-     connector)))
+  [options]
+  (let [connector (Connector. http-connector)
+        ssl-config (create-ssl-host-config options)
+        protocol-handler (.getProtocolHandler connector)]
+    (doto connector
+      (.setScheme "https")
+      (.setSecure true)
+      (.addSslHostConfig ssl-config)
+      (.setPort (:https-port options default-https-port)))
+    (.setSSLEnabled ^Http11NioProtocol (.getProtocolHandler connector) true)
+    connector))
 
 (defn- create-connector [^Service service options]
   (let [executor (create-executor options)]
     (.addExecutor service executor)
     (when (:http? options true)
-      (.addConnector service (create-http-connector options executor)))
+      (.addConnector service (create-connector-with-executor create-http-connector executor options)))
     (when (:https? options false)
-      (.addConnector service (create-https-connector options executor))))
+      (.addConnector service (create-connector-with-executor create-https-connector executor options))))
   service)
 
 (defn- create-server [options]
