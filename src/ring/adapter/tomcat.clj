@@ -93,13 +93,12 @@
 
 (defmacro create-connector-fn
   [create-fn ^Service service options & executor]
-  `(.addConnector
-     ~service
-     (if (:executor? ~options true)
-       (create-executored-connector ~create-fn (first ~@executor) ~options)
-       (~create-fn ~options))))
+  `(.addConnector ~service (if (:executor? ~options true)
+                             (create-executored-connector ~create-fn (first ~@executor) ~options)
+                             (~create-fn ~options))))
 
-(defn- create-connector [^Service service options & executor]
+(defn- create-connector
+  [^Service service options & executor]
   (when (:http? options true)
     (create-connector-fn create-http-connector service options executor))
   (when (:https? options false)
@@ -109,14 +108,12 @@
 (defn- create-server [options]
   (let [tomcat (doto (Tomcat.)
                  (.setBaseDir "."))
-        server (.getServer tomcat)
-        service (.getService tomcat)
-        host (.getHost tomcat)]
+        service (.getService tomcat)]
     (if (:executor? options true)
       (create-executored-connectors create-connector service options)
       (create-connector service options))
-    (.addLifecycleListener server (JreMemoryLeakPreventionListener.))
-    (.setAppBase host "resources")
+    (.addLifecycleListener (.getServer tomcat) (JreMemoryLeakPreventionListener.))
+    (.setAppBase (.getHost tomcat) "resources")
     tomcat))
 
 (defn run-tomcat
