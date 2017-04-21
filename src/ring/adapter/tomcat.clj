@@ -57,54 +57,63 @@
       (.setSslProtocol (:tls-protocol options "TLS")))
     ssl-host-config))
 
-(defn- create-http-connector
-  ([options]
-   (let [connector (Connector. http-connector)]
-     (doto connector
-       (.setPort (:port options default-http-port)))
-     (when (:https? options false)
-       (.setRedirectPort connector (:https-port options default-https-port)))
-     connector))
-  ([options executor]
-   (let [connector (create-http-connector options)]
-     (.setExecutor (cast AbstractProtocol (.getProtocolHandler connector)) executor)
-     connector)))
+(defmacro create-executored-connector
+  [connector-generator executor options]
+  `(let [connector# (~connector-generator ~options)]
+     (.setExecutor (cast AbstractProtocol (.getProtocolHandler connector#)) ~executor)
+     connector#))
+
+(defn- create-http-connector [options]
+  (let [connector (Connector. http-connector)]
+    (doto connector
+      (.setPort (:port options default-http-port)))
+    (when (:https? options false)
+      (.setRedirectPort connector (:https-port options default-https-port)))
+    connector))
 
 (defn- create-https-connector
-  ([options]
-   (let [connector (Connector. http-connector)
-         ssl-config (create-ssl-host-config options)
-         protocol-handler (.getProtocolHandler connector)]
-     (doto connector
-       (.setScheme "https")
-       (.setSecure true)
-       (.addSslHostConfig ssl-config)
-       (.setPort (:https-port options default-https-port)))
-     (.setSSLEnabled ^Http11NioProtocol (.getProtocolHandler connector) true)
-     connector))
-  ([options executor]
-   (let [connector (create-https-connector options)]
-     (.setExecutor (cast AbstractProtocol (.getProtocolHandler connector)) executor)
-     connector)))
+  [options]
+  (let [connector (Connector. http-connector)
+        ssl-config (create-ssl-host-config options)
+        protocol-handler (.getProtocolHandler connector)]
+    (doto connector
+      (.setScheme "https")
+      (.setSecure true)
+      (.addSslHostConfig ssl-config)
+      (.setPort (:https-port options default-https-port)))
+    (.setSSLEnabled ^Http11NioProtocol (.getProtocolHandler connector) true)
+    connector))
 
-(defn- create-connector [^Service service options]
-  (let [executor (create-executor options)]
-    (.addExecutor service executor)
-    (when (:http? options true)
-      (.addConnector service (create-http-connector options executor)))
-    (when (:https? options false)
-      (.addConnector service (create-https-connector options executor))))
+(defmacro create-executored-connectors
+  [body ^Service service options]
+  `(let [executor# (create-executor ~options)]
+     (.addExecutor ~service executor#)
+     (~body ~service ~options executor#)
+     ~service))
+
+(defmacro create-connector-fn
+  [create-fn ^Service service options & executor]
+  `(.addConnector ~service (if (:executor? ~options true)
+                             (create-executored-connector ~create-fn (first ~@executor) ~options)
+                             (~create-fn ~options))))
+
+(defn- create-connector
+  [^Service service options & executor]
+  (when (:http? options true)
+    (create-connector-fn create-http-connector service options executor))
+  (when (:https? options false)
+    (create-connector-fn create-https-connector service options executor))
   service)
 
 (defn- create-server [options]
   (let [tomcat (doto (Tomcat.)
                  (.setBaseDir "."))
-        server (.getServer tomcat)
-        service (.getService tomcat)
-        host (.getHost tomcat)]
-    (create-connector service options)
-    (.addLifecycleListener server (JreMemoryLeakPreventionListener.))
-    (.setAppBase host "resources")
+        service (.getService tomcat)]
+    (if (:executor? options true)
+      (create-executored-connectors create-connector service options)
+      (create-connector service options))
+    (.addLifecycleListener (.getServer tomcat) (JreMemoryLeakPreventionListener.))
+    (.setAppBase (.getHost tomcat) "resources")
     tomcat))
 
 (defn run-tomcat
@@ -119,7 +128,12 @@
   :key-pass - password of keystore file
   :tls-hostname - hostname to listen for https connector (default: _default_)
   :tls-protocol - list of SSL/TLS protocol to support for https connector (default: TLS)
-  :tls-ciphers - list of SSL/TLS ciphers to support for https connector (default: too long. ECDHE-ECDSA and ECDHE-RSA ciphers)"
+  :tls-ciphers - list of SSL/TLS ciphers to support for https connector (default: too long. ECDHE-ECDSA and ECDHE-RSA ciphers)
+  :executor? - use executor (default: true)
+  :executor-name - name of executor (default: ring-executor)
+  :max-threads - max number of threads in executor (default: 200)
+  :min-spare-threads - minimum number of spare threads in executor (default: 25)
+  :max-idle-time - max milliseconds before an idle thread shutsdown (default: 60000)"
   [handler options]
   (let [server (create-server options)
         context (.addContext server "" ".")]
