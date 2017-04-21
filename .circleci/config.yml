@@ -9,14 +9,25 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          key: << checksum "project.clj" >>
-      - run: .circleci/bin/lein deps
+          key: ring-tomcat-adapter-v0-{{ checksum "project.clj" }}
+
+      - run:
+          command: |
+            if [ ! -f ./bin/lein ]; then
+              mkdir ./bin
+              wget https://raw.githubusercontent.com/technomancy/leiningen/stable/bin/lein -O ./bin/lein
+              chmod +x ./bin/lein
+            fi
+
+      - run: ./bin/lein deps
       - save_cache:
+          key: ring-tomcat-adapter-v0-{{ checksum "project.clj" }}
           paths:
             - $HOME/.m2
             - $HOME/.lein
-          key: << checksum "project.clj" >>
-      - run: .circleci/bin/lein do test, uberjar
+            - ./bin
+
+      - run: ./bin/lein do test, uberjar
       - store_artifacts:
           path: target/ring-tomcat-adapter.jar
           destination: uberjar
