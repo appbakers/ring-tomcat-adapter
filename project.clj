@@ -1,4 +1,4 @@
-(defproject marchrock/ring-tomcat-adapter "0.3.0"
+(defproject marchrock/ring-tomcat-adapter "0.4.0-SNAPSHOT"
   :description "Ring Apache Tomcat adapter"
   :url "http://github.com/marchrock/ring-tomcat-adapter"
   :license {:name "Apache License, Version 2.0"
