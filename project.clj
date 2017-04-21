@@ -7,4 +7,11 @@
                  [ring/ring-core "1.6.0-RC2"]
                  [ring/ring-servlet "1.6.0-RC2"]
                  [org.apache.tomcat.embed/tomcat-embed-core "8.5.13"]
-                 [clj-http "3.4.1"]])
+                 [clj-http "3.4.1"]]
+
+  :profiles
+  {:uberjar {:omit-source true
+             :aot :all
+             :uberjar-name "ring-tomcat-adapter.jar"
+             :source-paths ["env/prod/clj"]
+             :resource-paths ["env/prod/resources"]}})
