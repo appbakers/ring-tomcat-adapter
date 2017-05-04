@@ -1,16 +1,16 @@
-(defproject marchrock/ring-tomcat-adapter "0.4.0"
+(defproject marchrock/ring-tomcat-adapter "0.4.1"
   :description "Ring Apache Tomcat adapter"
   :url "http://github.com/marchrock/ring-tomcat-adapter"
   :license {:name "Apache License, Version 2.0"
             :url "http://www.apache.org/licenses/LICENSE-2.0.html"}
   :dependencies [[org.clojure/clojure "1.8.0"]
-                 [ring/ring-core "1.6.0-RC3"]
-                 [ring/ring-servlet "1.6.0-RC3"]
-                 [org.apache.tomcat.embed/tomcat-embed-core "8.5.14"]
-                 [clj-http "3.4.1"]]
+                 [ring/ring-core "1.6.0"]
+                 [ring/ring-servlet "1.6.0"]
+                 [org.apache.tomcat.embed/tomcat-embed-core "8.5.14"]]
 
   :profiles
-  {:uberjar {:omit-source true
+  {:dev {:dependencies [[clj-http "3.5.0"]]}
+   :uberjar {:omit-source true
              :aot :all
              :uberjar-name "ring-tomcat-adapter.jar"
              :source-paths ["env/prod/clj"]
